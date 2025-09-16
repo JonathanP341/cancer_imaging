@@ -11,7 +11,7 @@ def create_dataloaders(data_path: str, transform, batch_size: int):
             cases.append(os.path.join(data_path, d)) #Putting the full relative path in the list
 
     #Creating the training set
-    train_dataset = BraTSDataSet(cases=cases[:int(len(cases)*0.15)], transform=transform) #Contains 1000 cases at first, now 187
+    train_dataset = BraTSDataSet(cases=cases[:int(len(cases)*0.1)], transform=transform) #Contains 1000 cases at first, now 125
     #Creating a validation set
     valid_dataset = BraTSDataSet(cases=cases[int(len(cases)*0.15):int(len(cases)*0.2)], transform=transform) #Contains ~63
     #Creating the testing set

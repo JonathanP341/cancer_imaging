@@ -14,44 +14,6 @@ from Models import Unet
 import engine
 import utils
 
-def binary_diceloss(pred, target, smooth=1):
-    """
-    Computes the DICE loss for binary segmentation
-    Args:
-        pred: Tensor of predictions [Batch_size, Input Channels, H, W, D]
-        pred: Tensor of ground truth [Batch Size, H, W, D]
-        smooth: Smoothing factor to avoid division by zero
-    Returns:
-        Scalar Dice Loss
-
-    """
-    pred_copy = pred.clone()
-    
-    pred_copy[pred_copy < 0] = 0
-    pred_copy[pred_copy > 0] = 1
-
-    #Calculate the intersection and union
-    intersection = abs(torch.sum(pred_copy * target, dim=(2, 3, 4)))
-    union = abs(torch.sum(pred_copy, dim=(2, 3, 4)) + torch.sum(target, dim=(1, 2, 3)))
-
-    #Compute the dice coefficient
-    dice  = (2. * intersection + smooth) / (union + smooth)
-    return 1. - dice.mean()
-
-def dice_ce_loss(logits, target, dice_weight=0.75, ce_weight=0.25):
-    """
-    Computes a loss based on a mix of cross entropy loss and dice loss
-    Args:
-        logits: The logits from the model
-        target: The truth labels
-    Returns: 
-        Scalar loss, 75% dice, 25% cross entropy
-    """
-    ce = nn.CrossEntropyLoss()(logits, target)
-    dice = binary_diceloss(logits, target)
-
-    return dice * dice_weight + ce_weight * ce
-
 #This is going to be the main file where you actually run the code
 
 #Setting the device to be cuda so we can go fast
@@ -67,9 +29,14 @@ if device:
 DATASET_PATH = Path("data/")
 SAMPLE1_PATH = Path("sample1/")
 SAMPLE2_PATH = Path("sample2/")
-NUM_EPOCHS = 2
+NUM_EPOCHS = 4
 LEARNING_RATE = 0.01
 BATCH_SIZE = 1
+
+MODEL_PATH = Path("models")
+MODEL_PATH.mkdir(parents=True, exist_ok=True)
+MODEL_NAME = "cancer_imaging_modelv1.0.pth"
+MODEL_SAVE_PATH = MODEL_PATH / MODEL_NAME
 
 #Creating a transform
 spatial_transform = tio.Compose([
@@ -81,7 +48,7 @@ spatial_transform = tio.Compose([
 train_dataloader, valid_dataloader, test_dataloader, channels, labels = data_loader.create_dataloaders(DATASET_PATH, transform=spatial_transform, batch_size=BATCH_SIZE)
 
 #Getting the variables for the model
-model = Unet(in_channels=len(channels), num_classes=len(labels)).to(device)
+model = Unet(in_channels=len(channels), num_classes=1).to(device) #Originally num_classes=len(labels), but realize I am outputting one value, so should have it at 1
 optimizer = torch.optim.AdamW(params=model.parameters(), lr=LEARNING_RATE)
 
 start_time = time.time()
@@ -89,7 +56,7 @@ results = engine.train(model=model,
                        train_dataloader=train_dataloader, 
                        valid_dataloader=valid_dataloader,
                        test_dataloader=test_dataloader, 
-                       loss_fn=dice_ce_loss,
+                       loss_fn=utils.dice_bce_loss,
                        optimizer=optimizer,
                        epochs=NUM_EPOCHS,
                        device=device)
@@ -99,4 +66,14 @@ print(f"The model took: {end_time - start_time:.2f} seconds")
 
 print(results)
 utils.plot_loss_curve(history=results, epochs=NUM_EPOCHS)
+
+#Saving the path 
+torch.save(obj=model.state_dict(), f=MODEL_SAVE_PATH) #Only saving the state_dict() to save space
+print(f"Model saved to {MODEL_SAVE_PATH}")
+
+#Testing on the two samples to confirm our model
+SAMPLE1_PATH = Path("sample1/")
+SAMPLE2_PATH = Path("sample2/")
+utils.random_image_inference(SAMPLE1_PATH, "00495", model, spatial_transform, device)
+utils.random_image_inference(SAMPLE2_PATH, "00621", model, spatial_transform, device)
 

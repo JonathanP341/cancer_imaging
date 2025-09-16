@@ -49,6 +49,6 @@ class BraTSDataSet(Dataset):
             transformed = self.transform(subject)
             x = transformed.image.data #Keeps it the same size
             y = transformed.label.data.squeeze(0) #Removing that first dimension at the beginning
-            return x.float(), y.long()
+            return x.float(), y.float()
         else:
-            return torch.from_numpy(x).float(), torch.from_numpy(y).long()
+            return torch.from_numpy(x).float(), torch.from_numpy(y).float()
