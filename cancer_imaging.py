@@ -29,7 +29,7 @@ if device:
 DATASET_PATH = Path("data/")
 SAMPLE1_PATH = Path("sample1/")
 SAMPLE2_PATH = Path("sample2/")
-NUM_EPOCHS = 4
+NUM_EPOCHS = 7
 LEARNING_RATE = 0.01
 BATCH_SIZE = 1
 
@@ -40,7 +40,7 @@ MODEL_SAVE_PATH = MODEL_PATH / MODEL_NAME
 
 #Creating a transform
 spatial_transform = tio.Compose([
-    tio.CropOrPad(target_shape=(96, 96, 64)), #The original shape is 240, 240, 155
+    tio.CropOrPad(target_shape=(128, 128, 64)), #The original shape is 240, 240, 155
     tio.ZNormalization()
 ])
 

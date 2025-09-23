@@ -33,7 +33,7 @@ def binary_diceloss(pred, target, smooth=1):
     dice  = (2. * intersection + smooth) / (union + smooth)
     return 1. - dice.mean()
 
-def dice_bce_loss(logits, target, dice_weight=0.95, bce_weight=0.05):
+def dice_bce_loss(logits, target, dice_weight=1, bce_weight=0):
     """
     Computes a loss based on a mix of cross entropy loss and dice loss
     Args:
@@ -96,8 +96,8 @@ def random_image_inference(sample_path, brats_num: str, model, transform, device
         logits = model(x)
 
         #Preparing the images
-        logits = logits.cpu().detach() #[1, 1, 96, 96, 64]
-        y = y.cpu().detach() #[96, 96, 64]
+        logits = logits.cpu().detach() #[1, 1, 128, 128, 64]
+        y = y.cpu().detach() #[128, 128, 64]
         logits = torch.sigmoid(logits)
 
         print(dice_bce_loss(logits, y.unsqueeze(dim=0)))

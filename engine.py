@@ -17,7 +17,6 @@ def train_loop(model: torch.nn.Module,
     train_loss = 0
 
     for batch, (X, y) in enumerate(dataloader):
-        print(batch)
         #Moving X and y to the right device
         X, y = X.to(device), y.to(device)
 
@@ -55,7 +54,6 @@ def test_loop(model: torch.nn.Module,
 
     with torch.inference_mode():
         for batch, (X, y) in enumerate(dataloader):
-            print(batch)
             #Moving X and y to the right device
             X, y = X.to(device), y.to(device)
 
