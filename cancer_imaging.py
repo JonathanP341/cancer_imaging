@@ -30,9 +30,9 @@ DATASET_PATH = Path("data/")
 SAMPLE1_PATH = Path("sample1/")
 SAMPLE2_PATH = Path("sample2/")
 NUM_EPOCHS = 7
-LEARNING_RATE = 0.01
+LEARNING_RATE = 1e-4
 BATCH_SIZE = 1
-
+WEIGHT_DECAY = 1e-5
 MODEL_PATH = Path("models")
 MODEL_PATH.mkdir(parents=True, exist_ok=True)
 MODEL_NAME = "cancer_imaging_modelv1.0.pth"
@@ -40,7 +40,8 @@ MODEL_SAVE_PATH = MODEL_PATH / MODEL_NAME
 
 #Creating a transform
 spatial_transform = tio.Compose([
-    tio.CropOrPad(target_shape=(128, 128, 64)), #The original shape is 240, 240, 155
+    tio.Resample(target=(2, 2, 2)),  # Downsample to ~(120, 120, 77)
+    tio.CropOrPad(target_shape=(128, 128, 80)),  # Then pad to even size
     tio.ZNormalization()
 ])
 
@@ -49,7 +50,8 @@ train_dataloader, valid_dataloader, test_dataloader, channels, labels = data_loa
 
 #Getting the variables for the model
 model = Unet(in_channels=len(channels), num_classes=1).to(device) #Originally num_classes=len(labels), but realize I am outputting one value, so should have it at 1
-optimizer = torch.optim.AdamW(params=model.parameters(), lr=LEARNING_RATE)
+optimizer = torch.optim.AdamW(params=model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
+scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
 
 start_time = time.time()
 results = engine.train(model=model, 
