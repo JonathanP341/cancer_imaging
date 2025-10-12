@@ -12,7 +12,7 @@ def binary_diceloss(pred, target, smooth=1):
     """
     Computes the DICE loss for binary segmentation
     Args:
-        pred: Tensor of predictions [Batch_size, 1, H, W, D]
+        pred: Tensor of predictions [Batch_size, H, W, D]
         pred: Tensor of ground truth [Batch Size, H, W, D]
         smooth: Smoothing factor to avoid division by zero
     Returns:
@@ -21,9 +21,8 @@ def binary_diceloss(pred, target, smooth=1):
     """
     #Applying sigmoid 
     pred_copy = torch.sigmoid(pred)
-    
-    #Removing the channel 
-    pred_copy = pred_copy.squeeze(dim=1)
+
+    pred = pred.squeeze(dim=1) #Removing that channel dimension, now shape is [Batch_size, H, W, D]
 
     #Calculate the intersection and union
     intersection = torch.sum(pred_copy * target, dim=(1, 2, 3))
@@ -40,14 +39,14 @@ def dice_bce_loss(logits, target, dice_weight=1, bce_weight=0):
         logits: The logits from the model
         target: The truth labels
     Returns: 
-        Scalar loss, 95% dice, 5% cross entropy
+        Scalar loss, 100% dice, 0% cross entropy
     """
     #The logits are in the form [1, 1, 96, 96, 64] => [1, 96, 96, 64]
-    logits = logits.squeeze(dim=1)
-    ce = nn.BCEWithLogitsLoss()(logits, target)
+    #logits_squeezed = logits.squeeze(dim=1)
+    #ce = nn.BCEWithLogitsLoss()(logits, target)
     dice = binary_diceloss(logits, target)
 
-    return dice * dice_weight + bce_weight * ce
+    return dice #* dice_weight + bce_weight * ce
 
 def plot_loss_curve(history, epochs):
     train_loss = history["train_loss"]
