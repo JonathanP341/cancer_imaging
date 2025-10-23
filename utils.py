@@ -140,7 +140,7 @@ def main():
     MODEL_PATH.mkdir(parents=True, exist_ok=True)
     MODEL_NAME = "cancer_imaging_modelv1.0.pth"
     MODEL_SAVE_PATH = MODEL_PATH / MODEL_NAME
-    SAMPLE1_PATH = Path("sample2/")
+    SAMPLE1_PATH = Path("sample1/")
 
     load_model = Models.Unet(2, 1).to(device)
     load_model.load_state_dict(torch.load(MODEL_SAVE_PATH))

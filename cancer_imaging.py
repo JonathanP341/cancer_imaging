@@ -30,29 +30,41 @@ DATASET_PATH = Path("data/")
 SAMPLE1_PATH = Path("sample1/")
 SAMPLE2_PATH = Path("sample2/")
 NUM_EPOCHS = 7
-LEARNING_RATE = 1e-4
+LEARNING_RATE = 1e-3
 BATCH_SIZE = 1
 WEIGHT_DECAY = 1e-5
 MODEL_PATH = Path("models")
 MODEL_PATH.mkdir(parents=True, exist_ok=True)
-MODEL_NAME = "cancer_imaging_modelv1.0.pth"
+MODEL_NAME = "cancer_imaging_modelv1.4.pth"
 MODEL_SAVE_PATH = MODEL_PATH / MODEL_NAME
 
-#Creating a transform
+#Creating a transform 
+#Need to make a better crop into ressample maybe? Because rn its too small and doesnt zoom in enough so hard to see
 spatial_transform = tio.Compose([
-    tio.Resample(target=(2, 2, 2)),  # Downsample to ~(120, 120, 77)
-    tio.CropOrPad(target_shape=(128, 128, 80)),  # Then pad to even size
-    tio.ZNormalization()
+    tio.CropOrPad(target_shape=(160, 160, 80)),  # Downsize to (160,160,80) to crop the unnecessary parts
+    tio.Resample(target=(2, 2, 1)), # Downsample to 80, 80, 80 from that to make it easier to process 
+    tio.ZNormalization(),
+    tio.RandomNoise(std=0.05)
+])
+spatial_transform2 = tio.Compose([
+    tio.CropOrPad(target_shape=(192, 192, 80)),  # Then pad to even size
+    tio.Resample(target=(2, 2, 1)), # Downsample to 96, 96, 80 
+    tio.ZNormalization(),
+    tio.RandomNoise(std=0.05)
 ])
 
+print("------WELCOME TO CANCER IMAGING MODEL TRAINING------")
 #Getting the dataloaders, classes and labels
-train_dataloader, valid_dataloader, test_dataloader, channels, labels = data_loader.create_dataloaders(DATASET_PATH, transform=spatial_transform, batch_size=BATCH_SIZE)
+print("Getting dataloaders...")
+train_dataloader, valid_dataloader, test_dataloader, channels, labels = data_loader.create_dataloaders(DATASET_PATH, transform=spatial_transform2, batch_size=BATCH_SIZE)
 
 #Getting the variables for the model
+print("Creating model...")
 model = Unet(in_channels=len(channels), num_classes=1).to(device) #Originally num_classes=len(labels), but realize I am outputting one value, so should have it at 1
 optimizer = torch.optim.AdamW(params=model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
 scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
 
+print("Starting training...")
 start_time = time.time()
 results = engine.train(model=model, 
                        train_dataloader=train_dataloader, 
@@ -76,6 +88,6 @@ print(f"Model saved to {MODEL_SAVE_PATH}")
 #Testing on the two samples to confirm our model
 SAMPLE1_PATH = Path("sample1/")
 SAMPLE2_PATH = Path("sample2/")
-utils.random_image_inference(SAMPLE1_PATH, "00495", model, spatial_transform, device)
-utils.random_image_inference(SAMPLE2_PATH, "00621", model, spatial_transform, device)
+utils.random_image_inference(SAMPLE1_PATH, "00495", model, spatial_transform2, device)
+utils.random_image_inference(SAMPLE2_PATH, "00621", model, spatial_transform2, device)
 
