@@ -1,16 +1,13 @@
-from matplotlib import pyplot as plt
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torchio as tio
-from pathlib import Path
 import time
+import os
 
-from nilearn import plotting, image
-import nibabel as nib
+import torchio as tio
 
-import data_loader
+from pathlib import Path
+
 from Models import Unet
+import data_loader
 import engine
 import utils
 
@@ -29,13 +26,13 @@ if device:
 DATASET_PATH = Path("data/")
 SAMPLE1_PATH = Path("sample1/")
 SAMPLE2_PATH = Path("sample2/")
-NUM_EPOCHS = 7
-LEARNING_RATE = 1e-3
-BATCH_SIZE = 1
+NUM_EPOCHS = 10
+LEARNING_RATE = 1e-4
+BATCH_SIZE = 4
 WEIGHT_DECAY = 1e-5
 MODEL_PATH = Path("models")
 MODEL_PATH.mkdir(parents=True, exist_ok=True)
-MODEL_NAME = "cancer_imaging_modelv1.4.pth"
+MODEL_NAME = "cancer_imaging_modelv1.6.pth"
 MODEL_SAVE_PATH = MODEL_PATH / MODEL_NAME
 
 #Creating a transform 
@@ -50,7 +47,8 @@ spatial_transform2 = tio.Compose([
     tio.CropOrPad(target_shape=(192, 192, 80)),  # Then pad to even size
     tio.Resample(target=(2, 2, 1)), # Downsample to 96, 96, 80 
     tio.ZNormalization(),
-    tio.RandomNoise(std=0.05)
+    tio.RandomNoise(std=0.05),
+    tio.RandomAffine()
 ])
 
 print("------WELCOME TO CANCER IMAGING MODEL TRAINING------")
@@ -61,8 +59,16 @@ train_dataloader, valid_dataloader, test_dataloader, channels, labels = data_loa
 #Getting the variables for the model
 print("Creating model...")
 model = Unet(in_channels=len(channels), num_classes=1).to(device) #Originally num_classes=len(labels), but realize I am outputting one value, so should have it at 1
+
+#To load the model uncomment this section and 
+"""
+model = Unet(2, 1)
+MODEL_PATH = Path("models")
+model.load_state_dict(torch.load(os.path.join(MODEL_PATH, "cancer_imaging_modelv1.5.pth")))
+model.to(device)
+"""
 optimizer = torch.optim.AdamW(params=model.parameters(), lr=LEARNING_RATE, weight_decay=WEIGHT_DECAY)
-scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3)
+#scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=3) # Not used yet
 
 print("Starting training...")
 start_time = time.time()

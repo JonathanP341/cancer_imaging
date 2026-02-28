@@ -65,6 +65,7 @@ utils.random_image_inference(SAMPLE2_PATH, "00621", model, spatial_transform, de
 """
 
 """ This compares the transforms applied to a sample image before and after the transform is applied """
+"""
 SAMPLE1_PATH = Path("sample1/")
 SAMPLE2_PATH = Path("sample2/")
 inputs = []
@@ -120,8 +121,8 @@ plt.imshow(seg_slice, cmap="gray")
 plt.title("Segmentation")
 
 plt.show()
-
 """
+
 #Testing a loaded model on the  
 device = "cuda" if torch.cuda.is_available() else "cpu"
 if device:
@@ -130,7 +131,7 @@ import Models
 import utils
 model = Models.Unet(2, 1)
 MODEL_PATH = Path("models")
-model.load_state_dict(torch.load(os.path.join(MODEL_PATH, "cancer_imaging_modelv1.4.pth")))
+model.load_state_dict(torch.load(os.path.join(MODEL_PATH, "cancer_imaging_modelv1.5.pth")))
 model.to(device)
 
 #Testing on the two samples to confirm our model
@@ -138,4 +139,3 @@ SAMPLE1_PATH = Path("sample1/")
 SAMPLE2_PATH = Path("sample2/")
 utils.random_image_inference(SAMPLE1_PATH, "00495", model, spatial_transform2, device)
 utils.random_image_inference(SAMPLE2_PATH, "00621", model, spatial_transform2, device)
-"""

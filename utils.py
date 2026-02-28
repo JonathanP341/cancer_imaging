@@ -12,41 +12,40 @@ def binary_diceloss(pred, target, smooth=1):
     """
     Computes the DICE loss for binary segmentation
     Args:
-        pred: Tensor of predictions [Batch_size, H, W, D]
-        pred: Tensor of ground truth [Batch Size, H, W, D]
+        pred: Tensor of predictions [Batch_size, Channel_size, H, W, D]
+        pred: Tensor of ground truth [Batch Size, Channel_size, H, W, D]
         smooth: Smoothing factor to avoid division by zero
     Returns:
         Scalar Dice Loss
 
     """
     #Applying sigmoid 
-    pred_copy = torch.sigmoid(pred)
-
-    pred = pred.squeeze(dim=1) #Removing that channel dimension, now shape is [Batch_size, H, W, D]
+    probs = torch.sigmoid(pred)
 
     #Calculate the intersection and union
-    intersection = torch.sum(pred_copy * target, dim=(1, 2, 3))
-    union = torch.sum(pred_copy, dim=(1, 2, 3)) + torch.sum(target, dim=(1, 2, 3))
+    intersection = torch.sum(probs * target, dim=(2, 3, 4))
+    union = torch.sum(probs, dim=(2, 3, 4)) + torch.sum(target, dim=(2, 3, 4))
 
     #Compute the dice coefficient
     dice  = (2. * intersection + smooth) / (union + smooth)
     return 1. - dice.mean()
 
-def dice_bce_loss(logits, target, dice_weight=1, bce_weight=0):
+def dice_bce_loss(logits, target, dice_weight=0.9, bce_weight=0.1):
     """
     Computes a loss based on a mix of cross entropy loss and dice loss
     Args:
         logits: The logits from the model
         target: The truth labels
     Returns: 
-        Scalar loss, 100% dice, 0% cross entropy
+        Scalar loss, 90% dice, 10% cross entropy
     """
-    #The logits are in the form [1, 1, 96, 96, 64] => [1, 96, 96, 64]
-    #logits_squeezed = logits.squeeze(dim=1)
-    #ce = nn.BCEWithLogitsLoss()(logits, target)
+    #Checking if the target is 4 or 5d
+    if target.dim() == 4:
+        target = target.unsqueeze(1)
+    ce = nn.BCEWithLogitsLoss()(logits, target)
     dice = binary_diceloss(logits, target)
 
-    return dice #* dice_weight + bce_weight * ce
+    return dice * dice_weight + bce_weight * ce
 
 def plot_loss_curve(history, epochs):
     train_loss = history["train_loss"]

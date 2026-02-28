@@ -2,13 +2,18 @@ import torch
 import torch.nn as nn
 
 class DoubleConv(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, dropout_rate=0.1):
         super().__init__()
         self.conv_op = nn.Sequential(
             nn.Conv3d(in_channels, out_channels, kernel_size=3, padding=1),
+            nn.BatchNorm3d(out_channels),
             nn.ReLU(),
+            nn.Dropout3d(dropout_rate),
+
             nn.Conv3d(out_channels, out_channels, kernel_size=3, padding=1),
-            nn.ReLU()
+            nn.BatchNorm3d(out_channels),
+            nn.ReLU(),
+            nn.Dropout3d(dropout_rate)
         )
     
     def forward(self, x):
@@ -40,32 +45,28 @@ class UpSample(nn.Module):
 class Unet(nn.Module):
     def __init__(self, in_channels, num_classes):
         super().__init__()
-        self.down_conv_1 = DownSample(in_channels, 64) #This number could change, this is a LOT of layers but whatever
-        self.down_conv_2 = DownSample(64, 128)
-        self.down_conv_3 = DownSample(128, 256)
-        self.down_conv_4 = DownSample(256, 512)
+        self.down_conv_1 = DownSample(in_channels, 32) #This number could change, this is a LOT of layers but whatever
+        self.down_conv_2 = DownSample(32, 64)
+        self.down_conv_3 = DownSample(64, 128)
 
-        self.bottle_neck = DoubleConv(512, 1024)
+        self.bottle_neck = DoubleConv(128, 256)
 
-        self.up_conv_1 = UpSample(1024, 512)
-        self.up_conv_2 = UpSample(512, 256)
-        self.up_conv_3 = UpSample(256, 128)
-        self.up_conv_4 = UpSample(128, 64)
+        self.up_conv_1 = UpSample(256, 128)
+        self.up_conv_2 = UpSample(128, 64)
+        self.up_conv_3 = UpSample(64, 32)
 
-        self.out = nn.Conv3d(in_channels=64, out_channels=num_classes, kernel_size=1) #By this point it will be the same size as the input 
+        self.out = nn.Conv3d(in_channels=32, out_channels=num_classes, kernel_size=1) #By this point it will be the same size as the input 
     
     def forward(self, x):
-        #print(x.shape) #[B, In Channels, 128, 128, 64]
+        #print(x.shape) #[B, In Channels, 128, 128, 64] Half all of these values since I reduced the size of the model
         down_1, p1 = self.down_conv_1(x)
         #print(p1.shape) #[B, 64, 64, 64, 32]
         down_2, p2 = self.down_conv_2(p1)
         #print(p2.shape) #[B, 128, 32, 32, 16]
         down_3, p3 = self.down_conv_3(p2)
         #print(p3.shape) #[B, 256, 16, 16, 8]
-        down_4, p4 = self.down_conv_4(p3)
-        #print(p4.shape) #[B, 512, 8, 8, 4]
 
-        return self.out(self.up_conv_4(self.up_conv_3(self.up_conv_2(self.up_conv_1(self.bottle_neck(p4), down_4), down_3), down_2), down_1))
+        return self.out(self.up_conv_3(self.up_conv_2(self.up_conv_1(self.bottle_neck(p3), down_3), down_2), down_1))
         """
         b = self.bottle_neck(p4)
         print(b.shape) #[B, 1024, 8, 8, 4]

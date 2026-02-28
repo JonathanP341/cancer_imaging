@@ -16,21 +16,26 @@ def train_loop(model: torch.nn.Module,
     #Setting up train loss
     train_loss = 0
 
+    #Setting up a scaler 
+    scaler = torch.amp.GradScaler()
+
     for batch, (X, y) in enumerate(dataloader):
         #Moving X and y to the right device
         X, y = X.to(device), y.to(device)
+        optimizer.zero_grad()
 
-        #Forward pass
-        y_pred = model(X)
+        with torch.amp.autocast(device_type="cuda", dtype=torch.float16):
+            #Forward pass
+            y_pred = model(X)
 
-        #Calculate the loss and accuracy
-        loss = loss_fn(y_pred, y)
-        train_loss += loss
+            #Calculate the loss and accuracy
+            loss = loss_fn(y_pred, y)
+            train_loss += loss
 
         #Other steps
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+        scaler.scale(loss).backward()
+        scaler.step(optimizer)
+        scaler.update()
     
     #Adjusting the metrics
     train_loss /= len(dataloader)
@@ -83,7 +88,9 @@ def train(model: torch.nn.Module,
     #Running the model
     for epoch in range(epochs):
         #Training and testing the loop
+        print("Starting training loop...")
         train_loss = train_loop(model=model, dataloader=train_dataloader, loss_fn=loss_fn, optimizer=optimizer, device=device)
+        print("Starting testing loop...")
         valid_loss = test_loop(model=model, dataloader=valid_dataloader, loss_fn=loss_fn, device=device)
 
         #Adding the values to the dictionary
